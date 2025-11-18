@@ -40,6 +40,7 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -47,6 +48,7 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="header">
         <div class="header-container">
@@ -56,7 +58,8 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
                     <?php if ($_SESSION['tipo'] == 'cliente'): ?>
                         <a href="carrinho.php" class="btn btn-primary carrinho-badge">
                             <i class="fas fa-shopping-cart"></i> Carrinho
-                            <?php if ($cart_count > 0): ?><span class="badge"><?= $cart_count ?></span><?php endif; ?>
+                            <span class="badge" id="cart-badge"
+                                style="<?= $cart_count > 0 ? '' : 'display:none;' ?>"><?= $cart_count ?></span>
                         </a>
                         <a href="painel_cliente.php" class="btn btn-primary"><i class="fas fa-user"></i> Minha Conta</a>
                     <?php else: ?>
@@ -94,7 +97,8 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <input type="text" name="busca" placeholder="Buscar produtos..." value="<?= htmlspecialchars($busca) ?>">
+                <input type="text" name="busca" placeholder="Buscar produtos..."
+                    value="<?= htmlspecialchars($busca) ?>">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>
                 <a href="index.php" class="btn btn-primary"><i class="fas fa-sync"></i> Limpar</a>
             </form>
@@ -111,7 +115,8 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
                 <?php foreach ($produtos as $p): ?>
                     <div class="produto-card">
                         <?php if ($p['imagem'] && file_exists($p['imagem'])): ?>
-                            <img src="<?= htmlspecialchars($p['imagem']) ?>" alt="<?= htmlspecialchars($p['nome']) ?>" class="produto-imagem">
+                            <img src="<?= htmlspecialchars($p['imagem']) ?>" alt="<?= htmlspecialchars($p['nome']) ?>"
+                                class="produto-imagem">
                         <?php else: ?>
                             <div class="produto-imagem" style="display:flex;align-items:center;justify-content:center;">
                                 <i class="fas fa-hamburger" style="font-size:64px;color:#ccc;"></i>
@@ -120,22 +125,18 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
 
                         <div class="produto-info">
                             <?php if ($p['categoria']): ?>
-                                <span class="produto-categoria"><i class="fas fa-tag"></i> <?= htmlspecialchars($p['categoria']) ?></span>
+                                <span class="produto-categoria"><i class="fas fa-tag"></i>
+                                    <?= htmlspecialchars($p['categoria']) ?></span>
                             <?php endif; ?>
                             <div class="produto-nome"><?= htmlspecialchars($p['nome']) ?></div>
                             <div class="produto-descricao"><?= htmlspecialchars($p['descricao']) ?></div>
                             <div class="produto-footer">
                                 <div class="produto-preco">R$ <?= number_format($p['preco'], 2, ',', '.') ?></div>
                                 <?php if (isset($_SESSION['usuario']) && $_SESSION['tipo'] == 'cliente'): ?>
-                                    <form method="POST" action="carrinho.php">
-                                        <input type="hidden" name="id_produto" value="<?= $p['id'] ?>">
-                                        <input type="hidden" name="tipo_produto" value="normal">
-                                        <input type="hidden" name="quantidade" value="1">
-                                        <input type="hidden" name="redirect" value="index.php">
-                                        <button type="submit" name="adicionar_carrinho" class="btn btn-success">
-                                            <i class="fas fa-cart-plus"></i> Adicionar
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-success btn-adicionar"
+                                        onclick="adicionarCarrinho(<?= $p['id'] ?>, this)" id="btn-add-<?= $p['id'] ?>">
+                                        <i class="fas fa-cart-plus"></i> Adicionar
+                                    </button>
                                 <?php else: ?>
                                     <a href="login.php" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Login</a>
                                 <?php endif; ?>
@@ -146,5 +147,83 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             <?php endif; ?>
         </div>
     </div>
+
+    <?php if (isset($_SESSION['usuario']) && $_SESSION['tipo'] == 'cliente'): ?>
+        <script>
+            // Mostrar toast de notificação
+            function mostrarToast(mensagem) {
+                // Remover toasts existentes
+                document.querySelectorAll('.toast').forEach(t => t.remove());
+
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = `<i class="fas fa-check-circle"></i> ${mensagem}`;
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(20px)';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            // Adicionar ao carrinho via AJAX
+            async function adicionarCarrinho(idProduto, btn) {
+                btn.classList.add('adding');
+                btn.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('adicionar_carrinho', '1');
+                    formData.append('id_produto', idProduto);
+                    formData.append('tipo_produto', 'normal');
+                    formData.append('quantidade', '1');
+                    formData.append('redirect', 'index.php');
+
+                    const response = await fetch('carrinho.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    // Atualizar contador do carrinho
+                    await atualizarContadorCarrinho();
+                    mostrarToast('Produto adicionado ao carrinho!');
+
+                } catch (error) {
+                    console.error('Erro ao adicionar:', error);
+                    mostrarToast('Erro ao adicionar produto');
+                } finally {
+                    setTimeout(() => {
+                        btn.classList.remove('adding');
+                        btn.disabled = false;
+                    }, 500);
+                }
+            }
+
+            // Atualizar contador do carrinho
+            async function atualizarContadorCarrinho() {
+                try {
+                    const response = await fetch('ajax_handler.php?action=contar_carrinho');
+                    const data = await response.json();
+
+                    const badge = document.getElementById('cart-badge');
+                    if (badge) {
+                        if (data.count > 0) {
+                            badge.textContent = data.count;
+                            badge.style.display = 'flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erro ao atualizar contador:', error);
+                }
+            }
+
+            // Atualizar contador periodicamente
+            setInterval(atualizarContadorCarrinho, 10000);
+        </script>
+    <?php endif; ?>
 </body>
+
 </html>
