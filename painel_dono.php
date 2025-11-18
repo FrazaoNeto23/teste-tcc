@@ -27,15 +27,25 @@ $total_clientes = $conn->query("SELECT COUNT(*) as t FROM usuarios WHERE tipo='c
 
 // Buscar pedidos recentes
 $pedidos = $conn->query("
-    SELECT p.*, u.nome as cliente_nome, u.telefone, u.endereco,
-           COUNT(pi.id) as total_itens
+    SELECT p.*, u.nome as cliente_nome, u.telefone, u.endereco
     FROM pedidos p 
     JOIN usuarios u ON p.id_cliente = u.id
-    LEFT JOIN pedido_itens pi ON p.id = pi.id_pedido
-    GROUP BY p.id
     ORDER BY p.criado_em DESC 
     LIMIT 20
 ")->fetch_all(MYSQLI_ASSOC);
+
+// Buscar itens de cada pedido
+foreach ($pedidos as &$pedido) {
+    $itens = $conn->query("
+        SELECT pi.*, pr.nome as produto_nome 
+        FROM pedido_itens pi 
+        JOIN produtos pr ON pi.id_produto = pr.id 
+        WHERE pi.id_pedido = {$pedido['id']}
+    ")->fetch_all(MYSQLI_ASSOC);
+    $pedido['itens'] = $itens;
+    $pedido['total_itens'] = count($itens);
+}
+unset($pedido);
 
 $status_cores = [
     'pendente' => '#ffc107',
@@ -144,14 +154,29 @@ $status_cores = [
                                         <?php endif; ?>
                                         <strong><i class="fas fa-calendar"></i> Data:</strong>
                                         <?= date('d/m/Y H:i', strtotime($pedido['criado_em'])) ?><br>
-                                        <strong><i class="fas fa-box"></i> Itens:</strong> <?= $pedido['total_itens'] ?><br>
                                         <?php if ($pedido['observacoes']): ?>
                                             <strong><i class="fas fa-comment"></i> Obs:</strong>
                                             <?= htmlspecialchars($pedido['observacoes']) ?><br>
                                         <?php endif; ?>
-                                        <strong style="color:#51cf66;font-size:20px;">Total:
-                                            <?= formatar_preco($pedido['total']) ?></strong>
                                     </div>
+
+                                    <!-- ITENS DO PEDIDO -->
+                                    <div class="pedido-itens">
+                                        <strong><i class="fas fa-utensils"></i> Itens do Pedido:</strong>
+                                        <ul class="lista-itens">
+                                            <?php foreach ($pedido['itens'] as $item): ?>
+                                                <li>
+                                                    <span class="item-qty"><?= $item['quantidade'] ?>x</span>
+                                                    <span class="item-name"><?= htmlspecialchars($item['produto_nome']) ?></span>
+                                                    <span
+                                                        class="item-price"><?= formatar_preco($item['preco_unitario'] * $item['quantidade']) ?></span>
+                                                </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
+
+                                    <strong style="color:#51cf66;font-size:20px;">Total:
+                                        <?= formatar_preco($pedido['total']) ?></strong>
                                 </div>
 
                                 <div class="status-form">
@@ -217,7 +242,7 @@ $status_cores = [
 
                 if (data.sucesso) {
                     mostrarToast('Status atualizado!');
-                    atualizarStats(); // Atualizar estatísticas
+                    atualizarStats();
                 } else {
                     mostrarToast('Erro ao atualizar status', 'error');
                 }
@@ -276,6 +301,21 @@ $status_cores = [
                             pedidosAtuais.add(pedido.id);
                         }
 
+                        // Gerar lista de itens
+                        let itensHtml = '';
+                        if (pedido.itens && pedido.itens.length > 0) {
+                            pedido.itens.forEach(item => {
+                                const subtotal = item.preco_unitario * item.quantidade;
+                                itensHtml += `
+                                    <li>
+                                        <span class="item-qty">${item.quantidade}x</span>
+                                        <span class="item-name">${item.produto_nome}</span>
+                                        <span class="item-price">${formatarPreco(subtotal)}</span>
+                                    </li>
+                                `;
+                            });
+                        }
+
                         html += `
                             <div class="pedido ${isNovo ? 'pedido-novo' : ''}" id="pedido-${pedido.id}">
                                 <div class="pedido-header">
@@ -286,10 +326,17 @@ $status_cores = [
                                             ${pedido.telefone ? `<strong><i class="fas fa-phone"></i> Telefone:</strong> ${pedido.telefone}<br>` : ''}
                                             ${pedido.endereco ? `<strong><i class="fas fa-map-marker-alt"></i> Endereço:</strong> ${pedido.endereco}<br>` : ''}
                                             <strong><i class="fas fa-calendar"></i> Data:</strong> ${formatarData(pedido.criado_em)}<br>
-                                            <strong><i class="fas fa-box"></i> Itens:</strong> ${pedido.total_itens}<br>
                                             ${pedido.observacoes ? `<strong><i class="fas fa-comment"></i> Obs:</strong> ${pedido.observacoes}<br>` : ''}
-                                            <strong style="color:#51cf66;font-size:20px;">Total: ${formatarPreco(pedido.total)}</strong>
                                         </div>
+                                        
+                                        <div class="pedido-itens">
+                                            <strong><i class="fas fa-utensils"></i> Itens do Pedido:</strong>
+                                            <ul class="lista-itens">
+                                                ${itensHtml}
+                                            </ul>
+                                        </div>
+                                        
+                                        <strong style="color:#51cf66;font-size:20px;">Total: ${formatarPreco(pedido.total)}</strong>
                                     </div>
                                     
                                     <div class="status-form">
@@ -310,7 +357,6 @@ $status_cores = [
 
                     if (novosPedidos) {
                         mostrarToast('Novo pedido recebido!');
-                        // Tocar som de notificação (opcional)
                         if ('Notification' in window && Notification.permission === 'granted') {
                             new Notification('Burger House', {
                                 body: 'Novo pedido recebido!',

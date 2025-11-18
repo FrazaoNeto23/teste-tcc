@@ -17,15 +17,25 @@ switch ($action) {
         }
 
         $pedidos = $conn->query("
-            SELECT p.*, u.nome as cliente_nome, u.telefone, u.endereco,
-                   COUNT(pi.id) as total_itens
+            SELECT p.*, u.nome as cliente_nome, u.telefone, u.endereco
             FROM pedidos p 
             JOIN usuarios u ON p.id_cliente = u.id
-            LEFT JOIN pedido_itens pi ON p.id = pi.id_pedido
-            GROUP BY p.id
             ORDER BY p.criado_em DESC 
             LIMIT 20
         ")->fetch_all(MYSQLI_ASSOC);
+
+        // Buscar itens de cada pedido
+        foreach ($pedidos as &$pedido) {
+            $itens = $conn->query("
+                SELECT pi.*, pr.nome as produto_nome 
+                FROM pedido_itens pi 
+                JOIN produtos pr ON pi.id_produto = pr.id 
+                WHERE pi.id_pedido = {$pedido['id']}
+            ")->fetch_all(MYSQLI_ASSOC);
+            $pedido['itens'] = $itens;
+            $pedido['total_itens'] = count($itens);
+        }
+        unset($pedido);
 
         echo json_encode(['pedidos' => $pedidos]);
         break;
