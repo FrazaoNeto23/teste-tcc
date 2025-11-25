@@ -77,7 +77,7 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
 
     <div class="container">
         <div class="hero">
-            <h1>🍔 Os Melhores Hambúrgueres da Cidade!</h1>
+            <h1>🍔 Os Melhores da Cidade!</h1>
             <p>Sabor incomparável, qualidade garantida</p>
         </div>
 
