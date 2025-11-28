@@ -13,7 +13,6 @@ if (isset($_POST['adicionar_produto'])) {
     $categoria = sanitizar_texto($_POST['categoria']);
 
     $imagem = '';
-    $erro_imagem = '';
 
     // Verificar se a imagem foi enviada
     if (!isset($_FILES['imagem']) || $_FILES['imagem']['error'] == UPLOAD_ERR_NO_FILE) {
@@ -96,7 +95,6 @@ if (isset($_GET['editar'])) {
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -104,7 +102,6 @@ if (isset($_GET['editar'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
     <div class="header">
         <div class="header-container">
@@ -117,12 +114,12 @@ if (isset($_GET['editar'])) {
 
     <div class="container">
         <?php if (isset($_SESSION['sucesso'])): ?>
-            <div class="alert-success"><i class="fas fa-check-circle"></i> <?= $_SESSION['sucesso'] ?></div>
+            <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= $_SESSION['sucesso'] ?></div>
             <?php unset($_SESSION['sucesso']); ?>
         <?php endif; ?>
 
         <?php if (isset($_SESSION['erro'])): ?>
-            <div class="alert-error"><i class="fas fa-exclamation-circle"></i> <?= $_SESSION['erro'] ?></div>
+            <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <?= $_SESSION['erro'] ?></div>
             <?php unset($_SESSION['erro']); ?>
         <?php endif; ?>
 
@@ -137,12 +134,8 @@ if (isset($_GET['editar'])) {
                     <div>
                         <strong>Dica:</strong> Para imagens de produtos, você pode usar:
                         <ul style="margin: 8px 0 0 20px; line-height: 1.8;">
-                            <li><a href="https://unsplash.com/s/photos/burger" target="_blank"
-                                    style="color: #1e40af;">Unsplash</a> - Imagens gratuitas de alta qualidade</li>
-                            <li><a href="https://www.pexels.com/search/burger/" target="_blank"
-                                    style="color: #1e40af;">Pexels</a> - Fotos grátis de hambúrgueres</li>
-                            <li><a href="https://pixabay.com/images/search/burger/" target="_blank"
-                                    style="color: #1e40af;">Pixabay</a> - Banco de imagens gratuito</li>
+                            <li><a href="https://unsplash.com/s/photos/burger" target="_blank" style="color: #1e40af;">Unsplash</a> - Imagens gratuitas de alta qualidade</li>
+                            <li><a href="https://www.pexels.com/search/burger/" target="_blank" style="color: #1e40af;">Pexels</a> - Fotos grátis de hambúrgueres</li>
                         </ul>
                     </div>
                 </div>
@@ -161,8 +154,7 @@ if (isset($_GET['editar'])) {
 
                     <div class="form-group">
                         <label><i class="fas fa-dollar-sign"></i> Preço *</label>
-                        <input type="number" name="preco" step="0.01" value="<?= $produto_editar['preco'] ?? '' ?>"
-                            required>
+                        <input type="number" name="preco" step="0.01" value="<?= $produto_editar['preco'] ?? '' ?>" required>
                     </div>
 
                     <div class="form-group">
@@ -173,8 +165,7 @@ if (isset($_GET['editar'])) {
                             <option value="Premium" <?= (isset($produto_editar) && $produto_editar['categoria'] == 'Premium') ? 'selected' : '' ?>>Premium</option>
                             <option value="Aves" <?= (isset($produto_editar) && $produto_editar['categoria'] == 'Aves') ? 'selected' : '' ?>>Aves</option>
                             <option value="Vegetarianos" <?= (isset($produto_editar) && $produto_editar['categoria'] == 'Vegetarianos') ? 'selected' : '' ?>>Vegetarianos</option>
-                            <option value="Acompanhamentos" <?= (isset($produto_editar) && $produto_editar['categoria'] == 'Acompanhamentos') ? 'selected' : '' ?>>Acompanhamentos
-                            </option>
+                            <option value="Acompanhamentos" <?= (isset($produto_editar) && $produto_editar['categoria'] == 'Acompanhamentos') ? 'selected' : '' ?>>Acompanhamentos</option>
                             <option value="Bebidas" <?= (isset($produto_editar) && $produto_editar['categoria'] == 'Bebidas') ? 'selected' : '' ?>>Bebidas</option>
                             <option value="Sobremesas" <?= (isset($produto_editar) && $produto_editar['categoria'] == 'Sobremesas') ? 'selected' : '' ?>>Sobremesas</option>
                         </select>
@@ -184,16 +175,12 @@ if (isset($_GET['editar'])) {
                         <label>
                             <i class="fas fa-image"></i>
                             Imagem do Produto <?= $produto_editar ? '' : '*' ?>
-                            <?php if (!$produto_editar): ?>
-                                <span style="color: #ef4444; font-weight: 700;">(OBRIGATÓRIO)</span>
-                            <?php endif; ?>
                         </label>
                         <input type="file" name="imagem" accept="image/*" <?= $produto_editar ? '' : 'required' ?>>
                         <?php if ($produto_editar && $produto_editar['imagem']): ?>
                             <div style="margin-top: 12px;">
                                 <small style="color:#999;">Imagem atual:</small><br>
-                                <img src="<?= $produto_editar['imagem'] ?>" alt="Preview"
-                                    style="max-width: 200px; border-radius: 8px; margin-top: 8px; border: 2px solid #e5e7eb;">
+                                <img src="<?= $produto_editar['imagem'] ?>" alt="Preview" style="max-width: 200px; border-radius: 8px; margin-top: 8px;">
                             </div>
                         <?php endif; ?>
                     </div>
@@ -214,8 +201,7 @@ if (isset($_GET['editar'])) {
                 <?php endif; ?>
 
                 <div style="display:flex;gap:10px;">
-                    <button type="submit" name="<?= $produto_editar ? 'editar_produto' : 'adicionar_produto' ?>"
-                        class="btn btn-success">
+                    <button type="submit" name="<?= $produto_editar ? 'editar_produto' : 'adicionar_produto' ?>" class="btn btn-success">
                         <i class="fas fa-save"></i> <?= $produto_editar ? 'Atualizar' : 'Adicionar' ?>
                     </button>
                     <?php if ($produto_editar): ?>
@@ -233,10 +219,9 @@ if (isset($_GET['editar'])) {
 
             <div class="search-bar">
                 <form method="GET" style="display:flex;gap:10px;width:100%;">
-                    <input type="text" name="busca" placeholder="Buscar produto ou categoria..."
-                        value="<?= htmlspecialchars($busca) ?>">
+                    <input type="text" name="busca" placeholder="Buscar produto ou categoria..." value="<?= htmlspecialchars($busca) ?>">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
-                    <a href="gerenciar_produtos.php" class="btn btn-primary"><i class="fas fa-sync"></i></a>
+                    <a href="gerenciar_produtos.php" class="btn btn-secondary"><i class="fas fa-sync"></i></a>
                 </form>
             </div>
 
@@ -261,8 +246,7 @@ if (isset($_GET['editar'])) {
                                     <?php if ($p['imagem'] && file_exists($p['imagem'])): ?>
                                         <img src="<?= $p['imagem'] ?>" alt="<?= $p['nome'] ?>">
                                     <?php else: ?>
-                                        <div
-                                            style="width:60px;height:60px;background:#fee2e2;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                        <div style="width:60px;height:60px;background:#fee2e2;border-radius:8px;display:flex;align-items:center;justify-content:center;">
                                             <i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i>
                                         </div>
                                     <?php endif; ?>
@@ -276,11 +260,10 @@ if (isset($_GET['editar'])) {
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="?editar=<?= $p['id'] ?>" class="btn btn-warning" style="padding:5px 10px;">
+                                    <a href="?editar=<?= $p['id'] ?>" class="btn btn-warning btn-sm">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="?deletar=<?= $p['id'] ?>" class="btn btn-danger" style="padding:5px 10px;"
-                                        onclick="return confirm('Deletar este produto?')">
+                                    <a href="?deletar=<?= $p['id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Deletar este produto?')">
                                         <i class="fas fa-trash"></i>
                                     </a>
                                 </td>
@@ -292,5 +275,4 @@ if (isset($_GET['editar'])) {
         </div>
     </div>
 </body>
-
 </html>

@@ -26,7 +26,9 @@ function formatar_preco($valor) {
 
 // Redirecionar
 function redirecionar($url, $mensagem = '', $tipo = 'sucesso') {
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     if ($mensagem) {
         $_SESSION[$tipo] = $mensagem;
     }

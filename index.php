@@ -48,7 +48,6 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -59,7 +58,7 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
         .categoria-section {
             margin-bottom: 40px;
         }
-
+        
         .categoria-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 28px;
@@ -70,14 +69,14 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             align-items: center;
             gap: 12px;
         }
-
+        
         .categoria-title::after {
             content: '';
             flex: 1;
             height: 2px;
             background: var(--light-gray);
         }
-
+        
         .categoria-icon {
             width: 44px;
             height: 44px;
@@ -89,7 +88,7 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             color: white;
             font-size: 18px;
         }
-
+        
         .filters-bar {
             background: var(--white);
             padding: 16px 20px;
@@ -101,7 +100,7 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             flex-wrap: wrap;
             align-items: center;
         }
-
+        
         .filter-btn {
             padding: 10px 20px;
             border: 2px solid var(--light-gray);
@@ -114,14 +113,13 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             color: var(--gray);
             transition: var(--transition);
         }
-
-        .filter-btn:hover,
-        .filter-btn.active {
+        
+        .filter-btn:hover, .filter-btn.active {
             border-color: var(--primary);
             background: var(--primary);
             color: white;
         }
-
+        
         .search-input {
             flex: 1;
             min-width: 200px;
@@ -130,29 +128,29 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             border-radius: var(--radius-full);
             font-family: 'Outfit', sans-serif;
         }
-
+        
         .search-input:focus {
             outline: none;
             border-color: var(--primary);
         }
-
+        
         .produto-card .add-btn {
             position: relative;
             overflow: hidden;
         }
-
+        
         .produto-card .add-btn.adding {
             pointer-events: none;
         }
-
+        
         .produto-card .add-btn.added {
             background: var(--success) !important;
         }
-
+        
         .produto-card .add-btn.added i::before {
             content: "\f00c";
         }
-
+        
         .promo-badge {
             position: absolute;
             top: 12px;
@@ -165,7 +163,7 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             font-weight: 700;
             text-transform: uppercase;
         }
-
+        
         .quick-add-toast {
             position: fixed;
             bottom: 100px;
@@ -182,26 +180,19 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             z-index: 1000;
             animation: slideInUp 0.4s ease;
         }
-
+        
         @keyframes slideInUp {
-            from {
-                transform: translateX(-50%) translateY(100px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(-50%) translateY(0);
-                opacity: 1;
-            }
+            from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
-
+        
         .floating-cart {
             position: fixed;
             bottom: 24px;
             right: 24px;
             z-index: 1000;
         }
-
+        
         .floating-cart a {
             width: 64px;
             height: 64px;
@@ -217,11 +208,11 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
             text-decoration: none;
             position: relative;
         }
-
+        
         .floating-cart a:hover {
             transform: scale(1.1);
         }
-
+        
         .floating-cart .count {
             position: absolute;
             top: -4px;
@@ -239,7 +230,6 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
         }
     </style>
 </head>
-
 <body>
     <div class="header">
         <div class="header-container">
@@ -286,18 +276,19 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
                 <i class="fas fa-th"></i> Todos
             </a>
             <?php foreach ($categorias as $cat): ?>
-                <a href="?categoria=<?= urlencode($cat['categoria']) ?>"
-                    class="filter-btn <?= $categoria == $cat['categoria'] ? 'active' : '' ?>">
+                <a href="?categoria=<?= urlencode($cat['categoria']) ?>" 
+                   class="filter-btn <?= $categoria == $cat['categoria'] ? 'active' : '' ?>">
                     <?= htmlspecialchars($cat['categoria']) ?>
                 </a>
             <?php endforeach; ?>
-
+            
             <form method="GET" style="display: flex; gap: 8px; flex: 1; min-width: 250px;">
                 <?php if ($categoria): ?>
                     <input type="hidden" name="categoria" value="<?= htmlspecialchars($categoria) ?>">
                 <?php endif; ?>
-                <input type="text" name="busca" class="search-input" placeholder="🔍 Buscar produtos..."
-                    value="<?= htmlspecialchars($busca) ?>">
+                <input type="text" name="busca" class="search-input" 
+                       placeholder="🔍 Buscar produtos..." 
+                       value="<?= htmlspecialchars($busca) ?>">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
             </form>
         </div>
@@ -333,17 +324,17 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
                         </span>
                         <?= htmlspecialchars($cat) ?>
                     </div>
-
+                    
                     <div class="produtos-grid">
                         <?php foreach ($prods as $p): ?>
                             <div class="produto-card">
                                 <div style="position: relative; overflow: hidden;">
                                     <?php if ($p['imagem'] && file_exists($p['imagem'])): ?>
-                                        <img src="<?= htmlspecialchars($p['imagem']) ?>" alt="<?= htmlspecialchars($p['nome']) ?>"
-                                            class="produto-imagem">
+                                        <img src="<?= htmlspecialchars($p['imagem']) ?>" 
+                                             alt="<?= htmlspecialchars($p['nome']) ?>" 
+                                             class="produto-imagem">
                                     <?php else: ?>
-                                        <div class="produto-imagem"
-                                            style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);">
+                                        <div class="produto-imagem" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);">
                                             <i class="fas fa-hamburger" style="font-size:64px;color:#ccc;"></i>
                                         </div>
                                     <?php endif; ?>
@@ -355,13 +346,15 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
                                     </span>
                                     <div class="produto-nome"><?= htmlspecialchars($p['nome']) ?></div>
                                     <div class="produto-descricao"><?= htmlspecialchars($p['descricao']) ?></div>
-
+                                    
                                     <div class="produto-footer">
                                         <div class="produto-preco">R$ <?= number_format($p['preco'], 2, ',', '.') ?></div>
-
+                                        
                                         <?php if (isset($_SESSION['usuario']) && $_SESSION['tipo'] == 'cliente'): ?>
-                                            <button type="button" class="btn btn-success add-btn"
-                                                onclick="adicionarCarrinho(<?= $p['id'] ?>, this)" data-id="<?= $p['id'] ?>">
+                                            <button type="button" 
+                                                    class="btn btn-success add-btn" 
+                                                    onclick="adicionarCarrinho(<?= $p['id'] ?>, this)"
+                                                    data-id="<?= $p['id'] ?>">
                                                 <i class="fas fa-cart-plus"></i> Adicionar
                                             </button>
                                         <?php else: ?>
@@ -390,99 +383,98 @@ unset($_SESSION['sucesso'], $_SESSION['erro']);
     <?php endif; ?>
 
     <?php if (isset($_SESSION['usuario']) && $_SESSION['tipo'] == 'cliente'): ?>
-        <script>
-            // Mostrar toast
-            function mostrarToast(mensagem, tipo = 'success') {
-                document.querySelectorAll('.toast').forEach(t => t.remove());
+    <script>
+        // Mostrar toast
+        function mostrarToast(mensagem, tipo = 'success') {
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            toast.innerHTML = `<i class="fas fa-check-circle"></i> ${mensagem}`;
+            document.body.appendChild(toast);
 
-                const toast = document.createElement('div');
-                toast.className = `toast ${tipo}`;
-                toast.innerHTML = `<i class="fas fa-check-circle"></i> ${mensagem}`;
-                document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
+        // Adicionar ao carrinho
+        async function adicionarCarrinho(idProduto, btn) {
+            btn.classList.add('adding');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const formData = new FormData();
+                formData.append('adicionar_carrinho', '1');
+                formData.append('id_produto', idProduto);
+                formData.append('tipo_produto', 'normal');
+                formData.append('quantidade', '1');
+                formData.append('redirect', 'index.php');
+
+                await fetch('carrinho.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Feedback visual
+                btn.classList.remove('adding');
+                btn.classList.add('added');
+                btn.innerHTML = '<i class="fas fa-check"></i> Adicionado!';
+                
+                mostrarToast('Produto adicionado ao carrinho!');
+                
+                // Atualizar contador
+                await atualizarContador();
+                
+                // Voltar ao normal após 2 segundos
                 setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateY(20px)';
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            }
-
-            // Adicionar ao carrinho
-            async function adicionarCarrinho(idProduto, btn) {
-                btn.classList.add('adding');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-                try {
-                    const formData = new FormData();
-                    formData.append('adicionar_carrinho', '1');
-                    formData.append('id_produto', idProduto);
-                    formData.append('tipo_produto', 'normal');
-                    formData.append('quantidade', '1');
-                    formData.append('redirect', 'index.php');
-
-                    await fetch('carrinho.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    // Feedback visual
-                    btn.classList.remove('adding');
-                    btn.classList.add('added');
-                    btn.innerHTML = '<i class="fas fa-check"></i> Adicionado!';
-
-                    mostrarToast('Produto adicionado ao carrinho!');
-
-                    // Atualizar contador
-                    await atualizarContador();
-
-                    // Voltar ao normal após 2 segundos
-                    setTimeout(() => {
-                        btn.classList.remove('added');
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-cart-plus"></i> Adicionar';
-                    }, 2000);
-
-                } catch (error) {
-                    console.error('Erro:', error);
+                    btn.classList.remove('added');
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-cart-plus"></i> Adicionar';
-                    mostrarToast('Erro ao adicionar', 'error');
-                }
+                }, 2000);
+
+            } catch (error) {
+                console.error('Erro:', error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cart-plus"></i> Adicionar';
+                mostrarToast('Erro ao adicionar', 'error');
             }
+        }
 
-            // Atualizar contador do carrinho
-            async function atualizarContador() {
-                try {
-                    const response = await fetch('ajax_handler.php?action=contar_carrinho');
-                    const data = await response.json();
+        // Atualizar contador do carrinho
+        async function atualizarContador() {
+            try {
+                const response = await fetch('ajax_handler.php?action=contar_carrinho');
+                const data = await response.json();
 
-                    const badge = document.getElementById('cart-badge');
-                    const floatingCart = document.getElementById('floating-cart');
-                    const floatingCount = document.getElementById('floating-count');
-
-                    if (data.count > 0) {
-                        if (badge) {
-                            badge.textContent = data.count;
-                            badge.style.display = 'flex';
-                        }
-                        if (floatingCart) {
-                            floatingCart.style.display = 'block';
-                            floatingCount.textContent = data.count;
-                        }
-                    } else {
-                        if (badge) badge.style.display = 'none';
-                        if (floatingCart) floatingCart.style.display = 'none';
+                const badge = document.getElementById('cart-badge');
+                const floatingCart = document.getElementById('floating-cart');
+                const floatingCount = document.getElementById('floating-count');
+                
+                if (data.count > 0) {
+                    if (badge) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'flex';
                     }
-                } catch (error) {
-                    console.error('Erro:', error);
+                    if (floatingCart) {
+                        floatingCart.style.display = 'block';
+                        floatingCount.textContent = data.count;
+                    }
+                } else {
+                    if (badge) badge.style.display = 'none';
+                    if (floatingCart) floatingCart.style.display = 'none';
                 }
+            } catch (error) {
+                console.error('Erro:', error);
             }
+        }
 
-            // Atualizar periodicamente
-            setInterval(atualizarContador, 10000);
-        </script>
+        // Atualizar periodicamente
+        setInterval(atualizarContador, 10000);
+    </script>
     <?php endif; ?>
 </body>
-
 </html>
