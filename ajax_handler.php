@@ -20,8 +20,15 @@ switch ($action) {
             SELECT p.*, u.nome as cliente_nome, u.telefone, u.endereco
             FROM pedidos p 
             JOIN usuarios u ON p.id_cliente = u.id
-            ORDER BY p.criado_em DESC 
-            LIMIT 20
+            ORDER BY 
+                CASE p.status 
+                    WHEN 'pendente' THEN 1 
+                    WHEN 'preparando' THEN 2 
+                    WHEN 'pronto' THEN 3 
+                    ELSE 4 
+                END,
+                p.criado_em DESC 
+            LIMIT 30
         ")->fetch_all(MYSQLI_ASSOC);
 
         // Buscar itens de cada pedido
@@ -50,9 +57,17 @@ switch ($action) {
         $stats = $conn->query("
             SELECT 
                 COUNT(DISTINCT id) as total_pedidos,
-                SUM(total) as faturamento_total,
-                SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pedidos_pendentes
+                COALESCE(SUM(total), 0) as faturamento_total,
+                SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pedidos_pendentes,
+                SUM(CASE WHEN status='preparando' THEN 1 ELSE 0 END) as pedidos_preparando
             FROM pedidos
+        ")->fetch_assoc();
+
+        // Vendas de hoje
+        $vendas_hoje = $conn->query("
+            SELECT COUNT(*) as qtd, COALESCE(SUM(total), 0) as valor 
+            FROM pedidos 
+            WHERE DATE(criado_em) = CURDATE() AND status != 'cancelado'
         ")->fetch_assoc();
 
         $total_produtos = $conn->query("SELECT COUNT(*) as t FROM produtos WHERE disponivel=1")->fetch_assoc()['t'];
@@ -60,6 +75,7 @@ switch ($action) {
 
         echo json_encode([
             'stats' => $stats,
+            'vendas_hoje' => $vendas_hoje,
             'total_produtos' => $total_produtos,
             'total_clientes' => $total_clientes
         ]);
