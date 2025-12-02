@@ -21,36 +21,16 @@ if (isset($_POST['atualizar_dados'])) {
     redirecionar('painel_cliente.php', 'Dados atualizados com sucesso!');
 }
 
-// Solicitar conta
-if (isset($_POST['solicitar_conta'])) {
-    $id_pedido = (int) $_POST['id_pedido'];
-    $local_conta = sanitizar_texto($_POST['local_conta']); // 'mesa' ou 'balcao'
-
-    $conn->query("UPDATE pedidos SET conta_solicitada=1, conta_solicitada_em=NOW(), local_conta='$local_conta' WHERE id=$id_pedido AND id_cliente=$id_cliente");
-
-    $mensagem = $local_conta == 'mesa' ? 'Conta solicitada! O garçom levará a conta até você.' : 'Conta solicitada! Aguarde no balcão para pagar.';
-    redirecionar('painel_cliente.php', $mensagem);
-}
-
-// Cancelar solicitação de conta
-if (isset($_POST['cancelar_conta'])) {
-    $id_pedido = (int) $_POST['id_pedido'];
-    $conn->query("UPDATE pedidos SET conta_solicitada=0, conta_solicitada_em=NULL, local_conta=NULL WHERE id=$id_pedido AND id_cliente=$id_cliente");
-    redirecionar('painel_cliente.php', 'Solicitação de conta cancelada.');
-}
-
 // Buscar dados do cliente
 $cliente = $conn->query("SELECT * FROM usuarios WHERE id=$id_cliente")->fetch_assoc();
 
-// Verificar se as colunas existem
-$tem_sistema_conta = $conn->query("SHOW COLUMNS FROM pedidos LIKE 'conta_solicitada'")->num_rows > 0;
-
-// Buscar pedidos
+// Buscar pedidos ATIVOS (não entregues e não cancelados)
 $pedidos = $conn->query("
     SELECT p.*, COUNT(pi.id) as total_itens 
     FROM pedidos p 
     LEFT JOIN pedido_itens pi ON p.id = pi.id_pedido 
     WHERE p.id_cliente = $id_cliente 
+    AND p.status NOT IN ('entregue', 'cancelado')
     GROUP BY p.id 
     ORDER BY p.criado_em DESC
 ")->fetch_all(MYSQLI_ASSOC);
@@ -103,14 +83,14 @@ $status_labels = [
         </div>
 
         <?php if (isset($_SESSION['sucesso'])): ?>
-                <div class="alert-success"><i class="fas fa-check-circle"></i> <?= $_SESSION['sucesso'] ?></div>
-                <?php unset($_SESSION['sucesso']); ?>
+            <div class="alert-success"><i class="fas fa-check-circle"></i> <?= $_SESSION['sucesso'] ?></div>
+            <?php unset($_SESSION['sucesso']); ?>
         <?php endif; ?>
 
         <div class="card">
             <div class="tabs">
                 <button class="tab active" onclick="mudarTab('pedidos')">
-                    <i class="fas fa-list"></i> Meus Pedidos
+                    <i class="fas fa-list"></i> Meus Pedidos Ativos
                     <span class="auto-update-badge">
                         <i class="fas fa-sync-alt"></i> Auto
                     </span>
@@ -122,88 +102,52 @@ $status_labels = [
 
             <!-- ABA PEDIDOS -->
             <div id="pedidos" class="tab-content active">
+                <div style="background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+                    <strong>ℹ️ Informação:</strong> Pedidos entregues e cancelados são ocultados automaticamente para manter seu painel organizado.
+                </div>
+
                 <div id="pedidos-container">
                     <?php if (empty($pedidos)): ?>
-                            <div class="empty">
-                                <i class="fas fa-receipt"></i>
-                                <h2>Nenhum pedido ainda</h2>
-                                <p>Faça seu primeiro pedido!</p>
-                                <br>
-                                <a href="index.php" class="btn btn-success"><i class="fas fa-shopping-bag"></i> Ver Produtos</a>
-                            </div>
+                        <div class="empty">
+                            <i class="fas fa-receipt"></i>
+                            <h2>Nenhum pedido ativo</h2>
+                            <p>Faça seu primeiro pedido!</p>
+                            <br>
+                            <a href="index.php" class="btn btn-success"><i class="fas fa-shopping-bag"></i> Ver Produtos</a>
+                        </div>
                     <?php else: ?>
-                            <?php foreach ($pedidos as $pedido): ?>
-                                    <div class="pedido <?= ($tem_sistema_conta && $pedido['conta_solicitada']) ? 'pedido-conta-solicitada' : '' ?>" id="pedido-<?= $pedido['id'] ?>">
-                                        <div class="pedido-header">
-                                            <div>
-                                                <div class="pedido-numero">Pedido #<?= $pedido['id'] ?></div>
-                                                <div class="pedido-info">
-                                                    <i class="fas fa-calendar"></i>
-                                                    <?= date('d/m/Y H:i', strtotime($pedido['criado_em'])) ?>
-                                                    | <i class="fas fa-box"></i> <?= $pedido['total_itens'] ?> item(ns)
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <span class="status-badge" id="status-badge-<?= $pedido['id'] ?>"
-                                                    style="background: <?= $status_cores[$pedido['status']] ?>">
-                                                    <?= $status_labels[$pedido['status']] ?>
-                                                </span>
-                                            </div>
+                        <?php foreach ($pedidos as $pedido): ?>
+                            <div class="pedido" id="pedido-<?= $pedido['id'] ?>">
+                                <div class="pedido-header">
+                                    <div>
+                                        <div class="pedido-numero">Pedido #<?= $pedido['id'] ?></div>
+                                        <div class="pedido-info">
+                                            <i class="fas fa-calendar"></i>
+                                            <?= date('d/m/Y H:i', strtotime($pedido['criado_em'])) ?>
+                                            | <i class="fas fa-box"></i> <?= $pedido['total_itens'] ?> item(ns)
                                         </div>
-                                
-                                        <?php if ($pedido['observacoes']): ?>
-                                                <div class="pedido-info">
-                                                    <i class="fas fa-comment"></i> <strong>Observações:</strong>
-                                                    <?= htmlspecialchars($pedido['observacoes']) ?>
-                                                </div>
-                                        <?php endif; ?>
-                                
-                                        <div class="pedido-total">Total: <?= formatar_preco($pedido['total']) ?></div>
-                                
-                                        <?php if ($tem_sistema_conta): ?>
-                                                <!-- SOLICITAR CONTA -->
-                                                <?php if (!$pedido['conta_solicitada'] && in_array($pedido['status'], ['pronto', 'entregue'])): ?>
-                                                        <div class="solicitar-conta-box">
-                                                            <p><i class="fas fa-info-circle"></i> <strong>Finalizou sua refeição?</strong> Escolha onde quer pagar:</p>
-                                                            <form method="POST" style="display:flex;gap:10px;margin-top:10px;">
-                                                                <input type="hidden" name="id_pedido" value="<?= $pedido['id'] ?>">
-                                                                <button type="submit" name="solicitar_conta" value="1" onclick="return confirm('Solicitar conta na mesa?')" class="btn btn-primary" style="flex:1;">
-                                                                    <input type="hidden" name="local_conta" value="mesa">
-                                                                    <i class="fas fa-chair"></i> Trazer na Mesa
-                                                                </button>
-                                                                <button type="submit" name="solicitar_conta" value="1" onclick="return confirm('Ir ao balcão pagar?')" class="btn btn-success" style="flex:1;">
-                                                                    <input type="hidden" name="local_conta" value="balcao">
-                                                                    <i class="fas fa-cash-register"></i> Pagar no Balcão
-                                                                </button>
-                                                            </form>
-                                                        </div>
-                                                <?php elseif ($pedido['conta_solicitada']): ?>
-                                                        <div class="conta-solicitada-box">
-                                                            <div style="text-align:center;">
-                                                                <i class="fas fa-check-circle"></i>
-                                                                <h3 style="margin:10px 0;">Conta Solicitada!</h3>
-                                                                <p>
-                                                                    <?php if ($pedido['local_conta'] == 'mesa'): ?>
-                                                                            <i class="fas fa-chair"></i> O garçom levará a conta até sua mesa.
-                                                                    <?php else: ?>
-                                                                            <i class="fas fa-cash-register"></i> Dirija-se ao balcão para pagar.
-                                                                    <?php endif; ?>
-                                                                </p>
-                                                                <small style="color:#666;">
-                                                                    Solicitado em: <?= date('d/m/Y H:i', strtotime($pedido['conta_solicitada_em'])) ?>
-                                                                </small>
-                                                                <form method="POST" style="margin-top:10px;">
-                                                                    <input type="hidden" name="id_pedido" value="<?= $pedido['id'] ?>">
-                                                                    <button type="submit" name="cancelar_conta" class="btn btn-danger btn-sm" onclick="return confirm('Cancelar solicitação de conta?')">
-                                                                        <i class="fas fa-times"></i> Cancelar Solicitação
-                                                                    </button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                <?php endif; ?>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
+                                        <span class="status-badge" id="status-badge-<?= $pedido['id'] ?>"
+                                            style="background: <?= $status_cores[$pedido['status']] ?>">
+                                            <?= $status_labels[$pedido['status']] ?>
+                                        </span>
+                                        <?php if ($pedido['status'] == 'pronto'): ?>
+                                            <button onclick="pedirConta(<?= $pedido['id'] ?>)" class="btn btn-success" style="padding:8px 16px;font-size:14px;">
+                                                <i class="fas fa-receipt"></i> Pedir Conta
+                                            </button>
                                         <?php endif; ?>
                                     </div>
-                            <?php endforeach; ?>
+                                </div>
+                                <?php if ($pedido['observacoes']): ?>
+                                    <div class="pedido-info">
+                                        <i class="fas fa-comment"></i> <strong>Observações:</strong>
+                                        <?= htmlspecialchars($pedido['observacoes']) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="pedido-total">Total: <?= formatar_preco($pedido['total']) ?></div>
+                            </div>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             </div>
@@ -243,55 +187,6 @@ $status_labels = [
         </div>
     </div>
 
-    <style>
-        .solicitar-conta-box {
-            margin-top: 15px;
-            padding: 15px;
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border-left: 4px solid #f59e0b;
-            border-radius: 8px;
-        }
-
-        .solicitar-conta-box p {
-            margin: 0 0 10px 0;
-            color: #92400e;
-        }
-
-        .conta-solicitada-box {
-            margin-top: 15px;
-            padding: 20px;
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            border-left: 4px solid #10b981;
-            border-radius: 8px;
-        }
-
-        .conta-solicitada-box i.fa-check-circle {
-            font-size: 40px;
-            color: #10b981;
-        }
-
-        .conta-solicitada-box h3 {
-            color: #065f46;
-            margin: 10px 0;
-        }
-
-        .conta-solicitada-box p {
-            color: #047857;
-            margin: 8px 0;
-            font-size: 15px;
-        }
-
-        .pedido-conta-solicitada {
-            border-left: 4px solid #10b981;
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-        }
-
-        .btn-sm {
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-    </style>
-
     <script>
         const statusCores = {
             'pendente': '#ffc107',
@@ -309,9 +204,10 @@ $status_labels = [
             'cancelado': 'CANCELADO'
         };
 
+        // Estado atual dos pedidos
         let statusAtual = {};
         <?php foreach ($pedidos as $pedido): ?>
-                statusAtual[<?= $pedido['id'] ?>] = '<?= $pedido['status'] ?>';
+            statusAtual[<?= $pedido['id'] ?>] = '<?= $pedido['status'] ?>';
         <?php endforeach; ?>
 
         function mudarTab(tab) {
@@ -321,6 +217,7 @@ $status_labels = [
             document.getElementById(tab).classList.add('active');
         }
 
+        // Mostrar toast de notificação
         function mostrarToast(mensagem) {
             const toast = document.createElement('div');
             toast.className = 'toast';
@@ -334,51 +231,116 @@ $status_labels = [
             }, 4000);
         }
 
+        // Formatar preço
         function formatarPreco(valor) {
             return 'R$ ' + parseFloat(valor).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         }
 
+        // Formatar data
         function formatarData(dataStr) {
             const data = new Date(dataStr);
             return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
 
+        // Atualizar pedidos
         async function atualizarPedidos() {
             try {
                 const response = await fetch('ajax_handler.php?action=buscar_pedidos_cliente');
                 const data = await response.json();
 
                 if (data.pedidos) {
-                    data.pedidos.forEach(pedido => {
+                    const container = document.getElementById('pedidos-container');
+
+                    // Filtrar apenas pedidos ativos (não entregues e não cancelados)
+                    const pedidosAtivos = data.pedidos.filter(p => 
+                        p.status !== 'entregue' && p.status !== 'cancelado'
+                    );
+
+                    if (pedidosAtivos.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty">
+                                <i class="fas fa-receipt"></i>
+                                <h2>Nenhum pedido ativo</h2>
+                                <p>Faça seu primeiro pedido!</p>
+                                <br>
+                                <a href="index.php" class="btn btn-success"><i class="fas fa-shopping-bag"></i> Ver Produtos</a>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let html = '';
+                    let pedidosRemovidos = [];
+
+                    pedidosAtivos.forEach(pedido => {
+                        // Verificar se status mudou
                         const statusAntigo = statusAtual[pedido.id];
                         const statusNovo = pedido.status;
+                        const mudou = statusAntigo && statusAntigo !== statusNovo;
 
-                        if (statusAntigo && statusAntigo !== statusNovo) {
-                            mostrarToast(`Pedido #${pedido.id} atualizado para: ${statusLabels[statusNovo]}`);
-                            
-                            if ('Notification' in window && Notification.permission === 'granted') {
-                                new Notification('Burger House', {
-                                    body: `Pedido #${pedido.id} está ${statusLabels[statusNovo]}!`,
-                                    icon: '🍔'
-                                });
-                            }
-                            
-                            // Atualizar badge visualmente
-                            const badge = document.getElementById(`status-badge-${pedido.id}`);
-                            if (badge) {
-                                badge.style.background = statusCores[statusNovo];
-                                badge.textContent = statusLabels[statusNovo];
+                        if (mudou) {
+                            // Se mudou para entregue ou cancelado, notificar que será removido
+                            if (statusNovo === 'entregue' || statusNovo === 'cancelado') {
+                                pedidosRemovidos.push(pedido.id);
+                            } else {
+                                mostrarToast(`Pedido #${pedido.id} atualizado para: ${statusLabels[statusNovo]}`);
+                                // Notificação do navegador
+                                if ('Notification' in window && Notification.permission === 'granted') {
+                                    new Notification('Burger House', {
+                                        body: `Pedido #${pedido.id} está ${statusLabels[statusNovo]}!`,
+                                        icon: '🍔'
+                                    });
+                                }
                             }
                         }
 
                         statusAtual[pedido.id] = statusNovo;
+
+                        html += `
+                            <div class="pedido ${mudou ? 'status-atualizado' : ''}" id="pedido-${pedido.id}">
+                                <div class="pedido-header">
+                                    <div style="flex:1;">
+                                        <div class="pedido-numero">Pedido #${pedido.id}</div>
+                                        <div class="pedido-info">
+                                            <i class="fas fa-calendar"></i> ${formatarData(pedido.criado_em)}
+                                            | <i class="fas fa-box"></i> ${pedido.total_itens} item(ns)
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
+                                        <span class="status-badge" id="status-badge-${pedido.id}" style="background: ${statusCores[pedido.status]}">
+                                            ${statusLabels[pedido.status]}
+                                        </span>
+                                        ${pedido.status === 'pronto' ? `
+                                            <button onclick="pedirConta(${pedido.id})" class="btn btn-success" style="padding:8px 16px;font-size:14px;">
+                                                <i class="fas fa-receipt"></i> Pedir Conta
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                ${pedido.observacoes ? `
+                                    <div class="pedido-info">
+                                        <i class="fas fa-comment"></i> <strong>Observações:</strong> ${pedido.observacoes}
+                                    </div>
+                                ` : ''}
+                                <div class="pedido-total">Total: ${formatarPreco(pedido.total)}</div>
+                            </div>
+                        `;
                     });
+
+                    container.innerHTML = html;
+
+                    // Notificar pedidos removidos
+                    if (pedidosRemovidos.length > 0) {
+                        const pedidosTexto = pedidosRemovidos.map(id => `#${id}`).join(', ');
+                        mostrarToast(`✅ Pedido(s) ${pedidosTexto} finalizado(s) e removido(s) da lista!`);
+                    }
                 }
             } catch (error) {
                 console.error('Erro ao atualizar pedidos:', error);
             }
         }
 
+        // Atualizar contador do carrinho
         async function atualizarContadorCarrinho() {
             try {
                 const response = await fetch('ajax_handler.php?action=contar_carrinho');
@@ -396,15 +358,48 @@ $status_labels = [
             }
         }
 
+        // Solicitar permissão para notificações
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
 
+        // Pedir conta
+        async function pedirConta(idPedido) {
+            if (!confirm('Deseja solicitar a conta deste pedido?')) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'pedir_conta');
+                formData.append('id_pedido', idPedido);
+
+                const response = await fetch('ajax_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.sucesso) {
+                    mostrarToast('✅ Conta solicitada! O atendente vai te atender em breve.');
+                    atualizarPedidos();
+                } else {
+                    mostrarToast('❌ Erro ao solicitar conta. Tente novamente.');
+                }
+            } catch (error) {
+                console.error('Erro ao pedir conta:', error);
+                mostrarToast('❌ Erro de conexão. Tente novamente.');
+            }
+        }
+
+        // Atualizar automaticamente a cada 30 segundos (aumentado de 5 para 30)
         setInterval(() => {
             atualizarPedidos();
             atualizarContadorCarrinho();
-        }, 5000);
+        }, 30000);
 
+        // Primeira atualização
         atualizarContadorCarrinho();
     </script>
 </body>

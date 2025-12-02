@@ -17,12 +17,11 @@ switch ($action) {
         }
 
         $pedidos = $conn->query("
-            SELECT p.*, u.nome as cliente_nome, u.telefone, u.endereco, m.numero as mesa_numero
+            SELECT p.*, u.nome as cliente_nome, u.telefone, u.endereco
             FROM pedidos p 
             JOIN usuarios u ON p.id_cliente = u.id
-            LEFT JOIN mesas m ON p.id_mesa = m.id
-            ORDER BY p.conta_solicitada DESC, p.criado_em DESC 
-            LIMIT 50
+            ORDER BY p.criado_em DESC 
+            LIMIT 20
         ")->fetch_all(MYSQLI_ASSOC);
 
         // Buscar itens de cada pedido
@@ -52,8 +51,7 @@ switch ($action) {
             SELECT 
                 COUNT(DISTINCT id) as total_pedidos,
                 SUM(total) as faturamento_total,
-                SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pedidos_pendentes,
-                SUM(CASE WHEN conta_solicitada=1 THEN 1 ELSE 0 END) as contas_solicitadas
+                SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pedidos_pendentes
             FROM pedidos
         ")->fetch_assoc();
 
@@ -82,22 +80,7 @@ switch ($action) {
         echo json_encode(['sucesso' => true, 'mensagem' => 'Status atualizado!']);
         break;
 
-    // Confirmar entrega da conta
-    case 'confirmar_conta_entregue':
-        if (!isset($_SESSION['usuario']) || $_SESSION['tipo'] != 'dono') {
-            echo json_encode(['erro' => 'Não autorizado']);
-            exit;
-        }
-
-        $id_pedido = (int) $_POST['id_pedido'];
-        
-        // Marcar conta como não solicitada (foi entregue)
-        $conn->query("UPDATE pedidos SET conta_solicitada=0 WHERE id=$id_pedido");
-
-        echo json_encode(['sucesso' => true, 'mensagem' => 'Conta marcada como entregue!']);
-        break;
-
-    // Buscar pedidos do cliente
+    // Buscar pedidos do cliente (SOMENTE ATIVOS - não entregues e não cancelados)
     case 'buscar_pedidos_cliente':
         if (!isset($_SESSION['usuario']) || $_SESSION['tipo'] != 'cliente') {
             echo json_encode(['erro' => 'Não autorizado']);
@@ -106,16 +89,50 @@ switch ($action) {
 
         $id_cliente = $_SESSION['id_usuario'];
 
+        // Filtrar apenas pedidos ativos
         $pedidos = $conn->query("
             SELECT p.*, COUNT(pi.id) as total_itens 
             FROM pedidos p 
             LEFT JOIN pedido_itens pi ON p.id = pi.id_pedido 
             WHERE p.id_cliente = $id_cliente 
+            AND p.status NOT IN ('entregue', 'cancelado')
             GROUP BY p.id 
             ORDER BY p.criado_em DESC
         ")->fetch_all(MYSQLI_ASSOC);
 
         echo json_encode(['pedidos' => $pedidos]);
+        break;
+
+    // Cliente pedir conta
+    case 'pedir_conta':
+        if (!isset($_SESSION['usuario']) || $_SESSION['tipo'] != 'cliente') {
+            echo json_encode(['erro' => 'Não autorizado']);
+            exit;
+        }
+
+        $id_pedido = (int) $_POST['id_pedido'];
+        $id_cliente = $_SESSION['id_usuario'];
+
+        // Verificar se o pedido pertence ao cliente e está pronto
+        $pedido = $conn->query("
+            SELECT * FROM pedidos 
+            WHERE id = $id_pedido 
+            AND id_cliente = $id_cliente 
+            AND status = 'pronto'
+        ")->fetch_assoc();
+
+        if (!$pedido) {
+            echo json_encode(['erro' => 'Pedido não encontrado ou não está pronto']);
+            exit;
+        }
+
+        // Marcar que o cliente pediu a conta
+        $conn->query("UPDATE pedidos SET conta_solicitada = 1 WHERE id = $id_pedido");
+
+        echo json_encode([
+            'sucesso' => true,
+            'mensagem' => 'Conta solicitada com sucesso!'
+        ]);
         break;
 
     // Buscar contagem do carrinho
@@ -197,20 +214,6 @@ switch ($action) {
             'total' => $total,
             'total_formatado' => 'R$ ' . number_format($total, 2, ',', '.')
         ]);
-        break;
-
-    // Buscar status do pedido
-    case 'buscar_status_pedido':
-        $id_pedido = (int) ($_GET['id'] ?? 0);
-        
-        if ($id_pedido == 0) {
-            echo json_encode(['erro' => 'ID inválido']);
-            exit;
-        }
-
-        $pedido = $conn->query("SELECT * FROM pedidos WHERE id=$id_pedido")->fetch_assoc();
-        
-        echo json_encode(['pedido' => $pedido]);
         break;
 
     default:
